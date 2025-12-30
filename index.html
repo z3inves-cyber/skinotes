@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>多家庭旅行分账通 - 家庭版</title>
+    <title>欧洲旅行分账 - 家庭版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
@@ -22,7 +22,7 @@
 
     <div class="flex justify-between items-center mb-6 pt-2">
         <div>
-            <h1 class="text-xl font-bold text-slate-800">🇪🇺 多家庭旅行分账通</h1>
+            <h1 class="text-xl font-bold text-slate-800">🇪🇺 旅行分账通</h1>
             <div class="text-xs text-gray-400 mt-1 flex items-center gap-1">
                 房间: <span id="roomIdDisplay" class="font-mono font-bold text-slate-600 bg-slate-100 px-1 rounded">...</span>
             </div>
@@ -238,4 +238,145 @@
                             <div>
                                 <div class="text-slate-800 font-bold font-mono">€${e.amount.toFixed(2)} <span class="text-slate-500 font-sans font-normal text-sm ml-1">${e.desc}</span></div>
                                 <div class="text-xs text-slate-400 mt-1">
-                                    <span class="bg-slate-100 px-1 rounded text-slate-500">${payer?.family || '?'}</span> ${
+                                    <span class="bg-slate-100 px-1 rounded text-slate-500">${payer?.family || '?'}</span> ${payer?.name || '未知'}
+                                </div>
+                            </div>
+                            <button onclick="deleteExpense('${e.id}')" class="text-slate-300 hover:text-red-500 px-2">&times;</button>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        // --- 核心计算逻辑 ---
+
+        function calculate() {
+            if (currentData.people.length === 0) return alert('请添加人员');
+
+            const people = currentData.people;
+            const expenses = currentData.expenses;
+            
+            // 1. 全局统计
+            const totalWeight = people.reduce((sum, p) => sum + p.weight, 0);
+            const totalExpense = expenses.reduce((sum, e) => sum + e.amount, 0);
+            
+            if (totalWeight === 0) return alert('总权重为0');
+            const unitPrice = totalExpense / totalWeight;
+
+            // 2. 按人计算 -> 按家庭聚合
+            let familyStats = {}; 
+
+            people.forEach(p => {
+                // 初始化家庭桶
+                if (!familyStats[p.family]) {
+                    familyStats[p.family] = { 
+                        name: p.family, 
+                        totalPaid: 0, 
+                        totalShouldPay: 0, 
+                        members: [] 
+                    };
+                }
+
+                // 计算个人的数据
+                const myPaid = expenses
+                    .filter(e => e.payerId === p.id)
+                    .reduce((sum, e) => sum + e.amount, 0);
+                const myShouldPay = p.weight * unitPrice;
+                
+                // 加入家庭总计
+                familyStats[p.family].totalPaid += myPaid;
+                familyStats[p.family].totalShouldPay += myShouldPay;
+
+                // 记录个人明细 (用于显示)
+                familyStats[p.family].members.push({
+                    name: p.name,
+                    role: p.weight === 1 ? '成' : '童',
+                    paid: myPaid,
+                    shouldPay: myShouldPay
+                });
+            });
+
+            // 计算家庭的最终 Balance
+            let familyList = Object.values(familyStats).map(f => {
+                f.balance = f.totalPaid - f.totalShouldPay;
+                return f;
+            });
+
+            // 3. 渲染家庭汇总 + 成员明细
+            document.getElementById('totalExpenseDisplay').innerText = `€${totalExpense.toFixed(2)}`;
+            
+            document.getElementById('familySummary').innerHTML = familyList.map(f => {
+                const balanceClass = f.balance >= 0 ? 'text-green-600' : 'text-red-500';
+                const balanceText = f.balance >= 0 ? '收' : '付';
+                
+                // 生成成员明细 HTML
+                const membersHtml = f.members.map(m => `
+                    <div class="member-detail">
+                        <span>${m.name} <span class="text-[10px] bg-slate-100 px-1 rounded">${m.role}</span></span>
+                        <span>应付:€${m.shouldPay.toFixed(1)} / 垫付:€${m.paid.toFixed(1)}</span>
+                    </div>
+                `).join('');
+
+                return `
+                <div class="mb-4">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-bold text-slate-700 text-sm bg-slate-100 px-2 py-0.5 rounded">${f.name}</span>
+                        <div class="text-right">
+                            <span class="${balanceClass} font-bold font-mono">
+                                ${balanceText} €${Math.abs(f.balance).toFixed(2)}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 border border-slate-100 rounded px-2 py-1">
+                        ${membersHtml}
+                    </div>
+                </div>`;
+            }).join('');
+
+            // 4. 计算最优转账 (只针对家庭)
+            let debtors = familyList.filter(f => f.balance < -0.01).sort((a,b) => a.balance - b.balance);
+            let creditors = familyList.filter(f => f.balance > 0.01).sort((a,b) => b.balance - a.balance);
+            
+            let transfers = [];
+            let i = 0, j = 0;
+            while (i < debtors.length && j < creditors.length) {
+                let amount = Math.min(Math.abs(debtors[i].balance), creditors[j].balance);
+                transfers.push({
+                    from: debtors[i].name,
+                    to: creditors[j].name,
+                    amount: amount
+                });
+                debtors[i].balance += amount;
+                creditors[j].balance -= amount;
+                if (Math.abs(debtors[i].balance) < 0.01) i++;
+                if (creditors[j].balance < 0.01) j++;
+            }
+
+            const tList = document.getElementById('transferList');
+            if (transfers.length === 0) {
+                tList.innerHTML = '<div class="p-4 bg-green-50 text-green-700 rounded-xl text-center text-sm">🎉 完美平账，无需转账</div>';
+            } else {
+                tList.innerHTML = transfers.map(t => `
+                    <div class="flex items-center justify-between bg-sky-50 border border-sky-100 p-3 rounded-lg">
+                        <div class="flex items-center gap-2 text-slate-700 text-sm">
+                            <span class="font-bold">${t.from}</span>
+                            <span class="text-sky-300">➔</span>
+                            <span class="font-bold">${t.to}</span>
+                        </div>
+                        <div class="text-lg font-bold text-sky-600 font-mono">€${t.amount.toFixed(2)}</div>
+                    </div>
+                `).join('');
+            }
+
+            document.getElementById('resultModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('resultModal').classList.add('hidden');
+        }
+        function copyLink() {
+            navigator.clipboard.writeText(window.location.href).then(() => alert('链接已复制！'));
+        }
+    </script>
+</body>
+</html>
