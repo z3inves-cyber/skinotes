@@ -62,7 +62,7 @@
         <div class="flex flex-col gap-3">
             <div class="flex gap-2">
                 <select id="payerSelect" class="flex-1 border-none ring-1 ring-slate-200 p-2 rounded-lg text-sm bg-white outline-none"></select>
-                <input id="expenseAmount" type="number" placeholder="¥ 金额" class="w-24 border-none ring-1 ring-slate-200 p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                <input id="expenseAmount" type="number" placeholder="€ 金额" class="w-24 border-none ring-1 ring-slate-200 p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
             </div>
             <div class="flex gap-2">
                 <input id="expenseDesc" type="text" placeholder="备注 (如: 门票, 晚餐)" class="flex-1 border-none ring-1 ring-slate-200 p-2 rounded-lg text-sm outline-none">
@@ -93,7 +93,7 @@
                 <div class="bg-slate-50 p-4 rounded-xl mb-4 border border-slate-100">
                     <div class="text-center mb-2">
                         <div class="text-xs text-slate-500 uppercase">本次总开销</div>
-                        <div class="text-2xl font-bold text-slate-800" id="totalExpenseDisplay">¥0.00</div>
+                        <div class="text-2xl font-bold text-slate-800" id="totalExpenseDisplay">€0.00</div>
                     </div>
                     <div id="familySummary" class="text-sm space-y-2 mt-3 pt-3 border-t border-slate-200"></div>
                 </div>
@@ -314,7 +314,7 @@
             });
 
             // 3. 渲染家庭汇总 UI
-            document.getElementById('totalExpenseDisplay').innerText = `¥${totalExpense.toFixed(2)}`;
+            document.getElementById('totalExpenseDisplay').innerText = `€${totalExpense.toFixed(2)}`;
             document.getElementById('familySummary').innerHTML = familyList.map(f => `
                 <div class="flex justify-between items-center">
                     <div>
@@ -322,9 +322,9 @@
                         <div class="text-xs text-slate-400 truncate w-32">${f.members.join(', ')}</div>
                     </div>
                     <div class="text-right">
-                        <div class="text-xs text-slate-400">垫付 ¥${f.paid.toFixed(0)}</div>
+                        <div class="text-xs text-slate-400">垫付 €${f.paid.toFixed(0)}</div>
                         <div class="${f.balance >= 0 ? 'text-green-600' : 'text-red-500'} font-bold">
-                            ${f.balance >= 0 ? '收' : '付'} ¥${Math.abs(f.balance).toFixed(2)}
+                            ${f.balance >= 0 ? '收' : '付'} €${Math.abs(f.balance).toFixed(2)}
                         </div>
                     </div>
                 </div>
@@ -361,7 +361,7 @@
                             <span class="text-blue-300">➜</span>
                             <span class="font-bold">${t.to}</span>
                         </div>
-                        <div class="text-xl font-bold text-blue-600">¥${t.amount.toFixed(2)}</div>
+                        <div class="text-xl font-bold text-blue-600">€${t.amount.toFixed(2)}</div>
                     </div>
                 `).join('');
             }
