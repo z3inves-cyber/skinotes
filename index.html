@@ -3,165 +3,188 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>多人旅行分账 - 实时版</title>
+    <title>家庭旅行分账 - 实时版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <style>
-        body { background-color: #f0fdf4; -webkit-tap-highlight-color: transparent; }
-        .card { background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-        .btn-primary { background-color: #059669; color: white; border-radius: 8px; font-weight: 600; }
-        .btn-danger { color: #ef4444; font-size: 0.875rem; }
-        .spinner { border: 3px solid #f3f3f3; border-top: 3px solid #3498db; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block;}
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        body { background-color: #f8fafc; -webkit-tap-highlight-color: transparent; }
+        .card { background: white; border-radius: 16px; box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.05); border: 1px solid #f1f5f9; }
+        .btn-primary { background-color: #3b82f6; color: white; border-radius: 10px; font-weight: 600; transition: all 0.2s; }
+        .btn-primary:active { transform: scale(0.96); }
+        .family-tag { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; margin-right: 4px; display: inline-block;}
     </style>
 </head>
-<body class="p-4 max-w-lg mx-auto pb-20">
+<body class="p-4 max-w-lg mx-auto pb-24">
 
-    <div class="flex justify-between items-center mb-6">
-        <h1 class="text-xl font-bold text-green-800">🌴 旅行记账通</h1>
-        <button onclick="copyLink()" class="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full flex items-center gap-1">
-            <span>🔗 复制链接邀请</span>
+    <div class="flex justify-between items-center mb-6 pt-2">
+        <div>
+            <h1 class="text-xl font-bold text-slate-800">👨‍👩‍👧‍👦 家庭分账通</h1>
+            <div class="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                房间: <span id="roomIdDisplay" class="font-mono font-bold text-slate-600 bg-slate-100 px-1 rounded">...</span>
+            </div>
+        </div>
+        <button onclick="copyLink()" class="text-xs bg-white border border-slate-200 text-slate-600 px-3 py-2 rounded-full shadow-sm active:bg-slate-50">
+            🔗 邀请好友
         </button>
     </div>
 
-    <div class="text-center text-gray-500 text-xs mb-4">
-        当前房间 ID: <span id="roomIdDisplay" class="font-mono font-bold text-gray-700">加载中...</span>
-    </div>
-
     <div class="card p-4 mb-4">
-        <h2 class="font-bold text-gray-700 mb-3 flex items-center">
-            👥 参与者 
-            <span class="text-xs font-normal text-gray-400 ml-2">(成人=1份, 儿童=0.5份)</span>
+        <h2 class="font-bold text-slate-700 mb-3 text-sm flex justify-between">
+            <span>1. 添加成员</span>
+            <span class="text-xs font-normal text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">按家庭结算</span>
         </h2>
-        <div id="personList" class="space-y-2 mb-3"></div>
-        <div class="flex gap-2">
-            <input id="newPersonName" type="text" placeholder="名字" class="flex-1 border border-gray-300 p-2 rounded-lg text-sm focus:outline-none focus:border-green-500">
-            <select id="newPersonType" class="border border-gray-300 p-2 rounded-lg text-sm bg-white">
-                <option value="1">成人</option>
-                <option value="0.5">儿童</option>
-            </select>
-            <button onclick="addPerson()" class="btn-primary px-4 py-2 text-sm whitespace-nowrap">添加</button>
+        
+        <div id="personList" class="space-y-2 mb-4"></div>
+
+        <div class="bg-slate-50 p-3 rounded-xl space-y-2">
+            <div class="flex gap-2">
+                <input id="familyInput" list="familyOptions" type="text" placeholder="家庭 (如: 老王家)" 
+                       class="w-1/2 border-none ring-1 ring-slate-200 p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                <datalist id="familyOptions">
+                    </datalist>
+
+                <input id="newPersonName" type="text" placeholder="成员昵称" 
+                       class="w-1/2 border-none ring-1 ring-slate-200 p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <div class="flex gap-2">
+                <select id="newPersonType" class="w-1/3 border-none ring-1 ring-slate-200 p-2 rounded-lg text-sm bg-white outline-none">
+                    <option value="1">成人 (1.0)</option>
+                    <option value="0.5">儿童 (0.5)</option>
+                </select>
+                <button onclick="addPerson()" class="flex-1 btn-primary py-2 text-sm">添加成员</button>
+            </div>
         </div>
     </div>
 
     <div class="card p-4 mb-4">
-        <h2 class="font-bold text-gray-700 mb-3">💰 记一笔</h2>
+        <h2 class="font-bold text-slate-700 mb-3 text-sm">2. 谁垫付了钱?</h2>
         <div class="flex flex-col gap-3">
             <div class="flex gap-2">
-                <select id="payerSelect" class="flex-1 border border-gray-300 p-2 rounded-lg text-sm bg-white"></select>
-                <input id="expenseAmount" type="number" placeholder="金额" class="w-24 border border-gray-300 p-2 rounded-lg text-sm focus:outline-none focus:border-green-500">
+                <select id="payerSelect" class="flex-1 border-none ring-1 ring-slate-200 p-2 rounded-lg text-sm bg-white outline-none"></select>
+                <input id="expenseAmount" type="number" placeholder="¥ 金额" class="w-24 border-none ring-1 ring-slate-200 p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
             </div>
             <div class="flex gap-2">
-                <input id="expenseDesc" type="text" placeholder="备注 (如: 午饭)" class="flex-1 border border-gray-300 p-2 rounded-lg text-sm">
-                <button onclick="addExpense()" class="btn-primary px-6 py-2">记账</button>
+                <input id="expenseDesc" type="text" placeholder="备注 (如: 门票, 晚餐)" class="flex-1 border-none ring-1 ring-slate-200 p-2 rounded-lg text-sm outline-none">
+                <button onclick="addExpense()" class="btn-primary px-6 py-2 shadow-blue-200 shadow-lg">记一笔</button>
             </div>
         </div>
         
-        <div class="mt-4 border-t pt-4">
-            <h3 class="text-xs font-bold text-gray-400 uppercase mb-2">账单明细</h3>
-            <div id="expenseList" class="space-y-2 max-h-60 overflow-y-auto text-sm">
-                <div class="text-center text-gray-400 py-4">暂无账单</div>
+        <div class="mt-5">
+            <h3 class="text-xs font-bold text-slate-400 uppercase mb-2 tracking-wider">最新账单</h3>
+            <div id="expenseList" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+                <div class="text-center text-slate-300 py-4 text-sm">暂无账单</div>
             </div>
         </div>
     </div>
 
-    <button onclick="calculate()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold shadow-lg mb-4 active:scale-95 transition-transform">
-        ✨ 查看分摊结果
+    <button onclick="calculate()" class="fixed bottom-6 left-4 right-4 bg-slate-800 text-white py-3.5 rounded-xl font-bold shadow-xl active:scale-95 transition-transform z-10 flex justify-center items-center gap-2">
+        <span class="text-lg">💰</span> 生成家庭结算方案
     </button>
 
-    <div id="resultModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div class="bg-white w-full max-w-md rounded-2xl p-5 max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-lg font-bold text-gray-800">结算方案</h2>
-                <button onclick="closeModal()" class="text-gray-500 text-2xl">&times;</button>
+    <div id="resultModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4 z-50">
+        <div class="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-5 h-[85vh] sm:h-auto overflow-y-auto flex flex-col">
+            <div class="flex justify-between items-center mb-4 shrink-0">
+                <h2 class="text-lg font-bold text-slate-800">家庭结算详单</h2>
+                <button onclick="closeModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center">&times;</button>
             </div>
             
-            <div id="summaryArea" class="bg-indigo-50 p-4 rounded-xl mb-4 text-sm space-y-1"></div>
-            
-            <h3 class="font-bold text-indigo-700 mb-2 text-sm">👉 转账方案 (最优解)</h3>
-            <div id="transferList" class="space-y-3"></div>
+            <div class="flex-1 overflow-y-auto">
+                <div class="bg-slate-50 p-4 rounded-xl mb-4 border border-slate-100">
+                    <div class="text-center mb-2">
+                        <div class="text-xs text-slate-500 uppercase">本次总开销</div>
+                        <div class="text-2xl font-bold text-slate-800" id="totalExpenseDisplay">¥0.00</div>
+                    </div>
+                    <div id="familySummary" class="text-sm space-y-2 mt-3 pt-3 border-t border-slate-200"></div>
+                </div>
+                
+                <h3 class="font-bold text-blue-600 mb-3 text-sm flex items-center gap-1">
+                    👉 最终转账方案 <span class="text-xs font-normal text-slate-400">(已合并家庭内部账务)</span>
+                </h3>
+                <div id="transferList" class="space-y-3 pb-8"></div>
+            </div>
 
-            <button onclick="closeModal()" class="w-full mt-6 border border-gray-300 py-2 rounded-lg text-gray-600">关闭</button>
+            <button onclick="closeModal()" class="w-full mt-4 bg-slate-100 py-3 rounded-xl text-slate-600 font-bold shrink-0">关闭</button>
         </div>
     </div>
 
     <script>
         // ==========================================
-        // CONFIG: 请在这里替换你的 Firebase 配置
+        // 配置区域：请务必替换为你的 Firebase 配置
         // ==========================================
         const firebaseConfig = {
-  apiKey: "AIzaSyBWglZNeHVI_iVHg1AvlEiXx7q_KsVjM98",
-  authDomain: "skinotes.firebaseapp.com",
-  projectId: "skinotes",
-  storageBucket: "skinotes.firebasestorage.app",
-  messagingSenderId: "566725772222",
-  appId: "1:566725772222:web:2e9b46b0f000b8a78bafef",
-  measurementId: "G-QQR42WN92C"
-};
+          apiKey: "AIzaSyBWglZNeHVI_iVHg1AvlEiXx7q_KsVjM98",
+          authDomain: "skinotes.firebaseapp.com",
+          projectId: "skinotes",
+          storageBucket: "skinotes.firebasestorage.app",
+          messagingSenderId: "566725772222",
+          appId: "1:566725772222:web:2e9b46b0f000b8a78bafef",
+          measurementId: "G-QQR42WN92C"
+        };
         // ==========================================
 
         // 初始化 Firebase
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // 获取房间号 (URL 参数 ?room=xyz)
+        // 房间逻辑
         const urlParams = new URLSearchParams(window.location.search);
         let roomId = urlParams.get('room');
-
-        // 如果没有房间号，自动生成一个并跳转
         if (!roomId) {
-            roomId = Math.random().toString(36).substring(2, 8);
-            window.location.search = `?room=${roomId}`;
+            roomId = Math.random().toString(36).substring(2, 7);
+            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?room=' + roomId;
+            window.history.replaceState({path:newUrl},'',newUrl);
         }
         document.getElementById('roomIdDisplay').innerText = roomId;
 
         let currentData = { people: [], expenses: [] };
-        let docRef = db.collection('trips').doc(roomId);
+        let docRef = db.collection('trips_v2').doc(roomId); // 使用新集合避免旧数据冲突
 
-        // --- 实时监听数据 ---
+        // 监听数据
         docRef.onSnapshot((doc) => {
             if (doc.exists) {
                 currentData = doc.data();
                 renderUI();
             } else {
-                // 初始化新房间
                 currentData = { people: [], expenses: [] };
                 docRef.set(currentData);
             }
         });
 
-        // --- 操作函数 ---
+        // --- 核心操作 ---
 
         function addPerson() {
+            const family = document.getElementById('familyInput').value.trim();
             const name = document.getElementById('newPersonName').value.trim();
-            const type = parseFloat(document.getElementById('newPersonType').value);
+            const weight = parseFloat(document.getElementById('newPersonType').value);
             
-            if (!name) return alert('请输入名字');
-            if (currentData.people.some(p => p.name === name)) return alert('名字重复了');
+            if (!family) return alert('请填写或选择家庭');
+            if (!name) return alert('请输入成员昵称');
+            
+            // 简单的防重名
+            if (currentData.people.some(p => p.name === name && p.family === family)) {
+                return alert('该家庭下已存在此人');
+            }
 
             const newPerson = {
                 id: Date.now().toString(),
+                family: family, // 新增家庭字段
                 name: name,
-                weight: type
+                weight: weight
             };
 
-            // 更新云端
             docRef.update({
                 people: firebase.firestore.FieldValue.arrayUnion(newPerson)
             });
 
             document.getElementById('newPersonName').value = '';
+            // 家庭输入框保留，方便连续输入同一家的人
         }
 
         function removePerson(id) {
-            if(!confirm('确定删除此人吗？相关的账单可能会出错。')) return;
-            const personToRemove = currentData.people.find(p => p.id === id);
-            docRef.update({
-                people: firebase.firestore.FieldValue.arrayRemove(personToRemove)
-            });
+            if(!confirm('删除成员可能导致账单显示错误，确定删除？')) return;
+            const p = currentData.people.find(item => item.id === id);
+            docRef.update({ people: firebase.firestore.FieldValue.arrayRemove(p) });
         }
 
         function addExpense() {
@@ -169,15 +192,15 @@
             const amount = parseFloat(document.getElementById('expenseAmount').value);
             const desc = document.getElementById('expenseDesc').value.trim() || '杂费';
 
-            if (!payerId) return alert('请选择谁付的钱');
-            if (isNaN(amount) || amount <= 0) return alert('请输入有效金额');
+            if (!payerId) return alert('请选择垫付人');
+            if (isNaN(amount) || amount <= 0) return alert('金额无效');
 
             const newExpense = {
                 id: Date.now().toString(),
                 payerId: payerId,
                 amount: amount,
                 desc: desc,
-                time: new Date().toLocaleString()
+                timestamp: Date.now()
             };
 
             docRef.update({
@@ -189,145 +212,161 @@
         }
 
         function deleteExpense(expenseId) {
-            const expense = currentData.expenses.find(e => e.id === expenseId);
-            if(confirm(`确定删除"${expense.desc}"这笔账吗？`)) {
-                docRef.update({
-                    expenses: firebase.firestore.FieldValue.arrayRemove(expense)
-                });
+            const e = currentData.expenses.find(item => item.id === expenseId);
+            if(confirm(`确定删除 ${e.desc} ¥${e.amount} 吗？`)) {
+                docRef.update({ expenses: firebase.firestore.FieldValue.arrayRemove(e) });
             }
         }
 
-        // --- 渲染 UI ---
+        // --- 渲染逻辑 ---
+
         function renderUI() {
-            // 渲染人员列表
+            // 1. 提取所有唯一的家庭名称，用于 datalist
+            const families = [...new Set(currentData.people.map(p => p.family))];
+            document.getElementById('familyOptions').innerHTML = families.map(f => `<option value="${f}">`).join('');
+
+            // 2. 渲染人员列表 (按家庭分组显示会更好看，这里简单按添加顺序，显示家庭标签)
             const pList = document.getElementById('personList');
             pList.innerHTML = currentData.people.map(p => `
-                <div class="flex justify-between items-center bg-white border border-gray-100 p-2 rounded">
-                    <div>
-                        <span class="font-medium">${p.name}</span>
-                        <span class="text-xs text-gray-400 bg-gray-100 px-1 rounded ml-1">${p.weight === 1 ? '成人' : '儿童'}</span>
+                <div class="flex justify-between items-center bg-white border border-slate-100 p-2.5 rounded-lg shadow-sm">
+                    <div class="flex items-center">
+                        <span class="family-tag">${p.family}</span>
+                        <span class="font-medium text-slate-700">${p.name}</span>
+                        <span class="text-xs text-slate-400 ml-2">(${p.weight === 1 ? '成人' : '儿童'})</span>
                     </div>
-                    <button onclick="removePerson('${p.id}')" class="text-red-300 hover:text-red-500 text-xs">删除</button>
+                    <button onclick="removePerson('${p.id}')" class="text-slate-300 hover:text-red-500 text-lg leading-none">&times;</button>
                 </div>
             `).join('');
 
-            // 渲染付款人下拉框
+            // 3. 渲染付款人下拉框 (显示家庭前缀)
             const selector = document.getElementById('payerSelect');
-            const currentVal = selector.value;
-            selector.innerHTML = `<option value="">-- 谁付的钱 --</option>` + 
-                currentData.people.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-            selector.value = currentVal; // 保持选中状态
+            const savedVal = selector.value;
+            selector.innerHTML = `<option value="">-- 选择垫付人 --</option>` + 
+                currentData.people.map(p => `<option value="${p.id}">[${p.family}] ${p.name}</option>`).join('');
+            selector.value = savedVal;
 
-            // 渲染账单列表 (倒序，最新的在上面)
+            // 4. 渲染账单
             const eList = document.getElementById('expenseList');
-            if (currentData.expenses.length === 0) {
-                eList.innerHTML = '<div class="text-center text-gray-400 py-4">暂无账单，快去记一笔吧</div>';
+            const sortedExpenses = [...currentData.expenses].sort((a,b) => b.timestamp - a.timestamp);
+            
+            if (sortedExpenses.length === 0) {
+                eList.innerHTML = '<div class="text-center text-slate-300 py-6 text-sm">暂无记录</div>';
             } else {
-                eList.innerHTML = [...currentData.expenses].reverse().map(e => {
+                eList.innerHTML = sortedExpenses.map(e => {
                     const payer = currentData.people.find(p => p.id === e.payerId);
+                    const payerName = payer ? payer.name : '未知';
+                    const payerFamily = payer ? payer.family : '?';
                     return `
-                        <div class="flex justify-between items-center bg-gray-50 p-2 rounded border-l-4 border-green-400">
+                        <div class="flex justify-between items-center bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
                             <div>
-                                <div class="text-gray-800 font-medium">¥${e.amount} <span class="text-gray-500 font-normal text-xs">- ${e.desc}</span></div>
-                                <div class="text-xs text-gray-400">${payer ? payer.name : '未知人员'} 垫付</div>
+                                <div class="text-slate-800 font-bold">¥${e.amount} <span class="text-slate-500 font-normal text-sm ml-1">${e.desc}</span></div>
+                                <div class="text-xs text-slate-400 mt-1">
+                                    <span class="bg-slate-100 px-1 rounded text-slate-500">${payerFamily}</span> ${payerName} 垫付
+                                </div>
                             </div>
-                            <button onclick="deleteExpense('${e.id}')" class="text-gray-400 hover:text-red-500 text-xs px-2">×</button>
+                            <button onclick="deleteExpense('${e.id}')" class="text-slate-300 hover:text-red-500 px-2">&times;</button>
                         </div>
                     `;
                 }).join('');
             }
         }
 
-        // --- 核心算法 ---
+        // --- 核心算法：按家庭结算 ---
+
         function calculate() {
-            if (currentData.people.length === 0) return alert('请先添加参与者');
+            if (currentData.people.length === 0) return alert('没人才怎么算？');
 
             const people = currentData.people;
             const expenses = currentData.expenses;
             
-            // 1. 计算总权重和总花费
+            // 1. 全局统计
             const totalWeight = people.reduce((sum, p) => sum + p.weight, 0);
             const totalExpense = expenses.reduce((sum, e) => sum + e.amount, 0);
-            
-            if (totalWeight === 0) return alert('总权重为0，无法计算');
-            
-            const unitPrice = totalExpense / totalWeight; // 单份价格
+            if (totalWeight === 0) return alert('总权重为0');
+            const unitPrice = totalExpense / totalWeight;
 
-            // 2. 计算每个人：已付、应付、差额
-            let balances = people.map(p => {
-                const paid = expenses
-                    .filter(e => e.payerId === p.id)
-                    .reduce((sum, e) => sum + e.amount, 0);
-                const shouldPay = unitPrice * p.weight;
-                const balance = paid - shouldPay; // 正数=多付了(别人该给我)，负数=少付了(该给别人)
-                return { name: p.name, balance, paid, shouldPay, weight: p.weight };
+            // 2. 按家庭聚合数据
+            // 结构: { "老王家": { paid: 0, shouldPay: 0, balance: 0, members: [] } }
+            let familyStats = {};
+
+            // 初始化家庭和计算应付
+            people.forEach(p => {
+                if (!familyStats[p.family]) {
+                    familyStats[p.family] = { name: p.family, paid: 0, shouldPay: 0, members: [] };
+                }
+                const myShouldPay = p.weight * unitPrice;
+                familyStats[p.family].shouldPay += myShouldPay;
+                familyStats[p.family].members.push(p.name);
             });
 
-            // 渲染汇总
-            document.getElementById('summaryArea').innerHTML = `
-                <div class="flex justify-between font-bold border-b border-indigo-100 pb-2">
-                    <span>总开销</span>
-                    <span>¥${totalExpense.toFixed(2)}</span>
-                </div>
-                ${balances.map(b => `
-                    <div class="flex justify-between text-gray-600 mt-1">
-                        <span>${b.name} <span class="text-xs text-gray-400">(${b.weight===1?'成':'童'})</span></span>
-                        <span>
-                            <span class="text-xs mr-2">垫付 ¥${b.paid.toFixed(0)}</span>
-                            <span class="${b.balance >= 0 ? 'text-green-600' : 'text-red-500'} font-bold">
-                                ${b.balance >= 0 ? '收' : '付'} ¥${Math.abs(b.balance).toFixed(2)}
-                            </span>
-                        </span>
+            // 计算已付 (垫付)
+            expenses.forEach(e => {
+                const payer = people.find(p => p.id === e.payerId);
+                if (payer && familyStats[payer.family]) {
+                    familyStats[payer.family].paid += e.amount;
+                }
+            });
+
+            // 计算家庭差额 (Balance)
+            let familyList = Object.values(familyStats).map(f => {
+                f.balance = f.paid - f.shouldPay;
+                return f;
+            });
+
+            // 3. 渲染家庭汇总 UI
+            document.getElementById('totalExpenseDisplay').innerText = `¥${totalExpense.toFixed(2)}`;
+            document.getElementById('familySummary').innerHTML = familyList.map(f => `
+                <div class="flex justify-between items-center">
+                    <div>
+                        <span class="font-bold text-slate-700">${f.name}</span>
+                        <div class="text-xs text-slate-400 truncate w-32">${f.members.join(', ')}</div>
                     </div>
-                `).join('')}
-            `;
+                    <div class="text-right">
+                        <div class="text-xs text-slate-400">垫付 ¥${f.paid.toFixed(0)}</div>
+                        <div class="${f.balance >= 0 ? 'text-green-600' : 'text-red-500'} font-bold">
+                            ${f.balance >= 0 ? '收' : '付'} ¥${Math.abs(f.balance).toFixed(2)}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
 
-            // 3. 计算最优转账 (贪心算法)
-            let debtors = balances.filter(b => b.balance < -0.01).sort((a, b) => a.balance - b.balance); // 欠钱最多的排前面
-            let creditors = balances.filter(b => b.balance > 0.01).sort((a, b) => b.balance - a.balance); // 被欠最多的排前面
-
+            // 4. 计算转账 (贪心算法，但是针对家庭)
+            let debtors = familyList.filter(f => f.balance < -0.01).sort((a,b) => a.balance - b.balance);
+            let creditors = familyList.filter(f => f.balance > 0.01).sort((a,b) => b.balance - a.balance);
+            
             let transfers = [];
             let i = 0, j = 0;
-            
             while (i < debtors.length && j < creditors.length) {
-                let debtor = debtors[i];
-                let creditor = creditors[j];
-                
-                // 交易额是两者绝对值的较小者
-                let amount = Math.min(Math.abs(debtor.balance), creditor.balance);
-                
+                let amount = Math.min(Math.abs(debtors[i].balance), creditors[j].balance);
                 transfers.push({
-                    from: debtor.name,
-                    to: creditor.name,
+                    from: debtors[i].name,
+                    to: creditors[j].name,
                     amount: amount
                 });
-
-                // 更新余额
-                debtor.balance += amount;
-                creditor.balance -= amount;
-
-                // 谁平账了，谁就出局
-                if (Math.abs(debtor.balance) < 0.01) i++;
-                if (creditor.balance < 0.01) j++;
+                debtors[i].balance += amount;
+                creditors[j].balance -= amount;
+                if (Math.abs(debtors[i].balance) < 0.01) i++;
+                if (creditors[j].balance < 0.01) j++;
             }
 
             // 渲染转账列表
             const tList = document.getElementById('transferList');
             if (transfers.length === 0) {
-                tList.innerHTML = '<div class="text-center text-green-600 bg-green-50 p-3 rounded">🎉 账目已平，无需转账！</div>';
+                tList.innerHTML = '<div class="p-4 bg-green-50 text-green-700 rounded-xl text-center">🎉 完美平账，无需转账</div>';
             } else {
                 tList.innerHTML = transfers.map(t => `
-                    <div class="flex justify-between items-center bg-white border border-gray-200 p-3 rounded-lg shadow-sm">
-                        <div class="flex items-center gap-2">
-                            <span class="font-bold text-gray-700">${t.from}</span>
-                            <span class="text-gray-400">➔</span>
-                            <span class="font-bold text-gray-700">${t.to}</span>
+                    <div class="flex items-center justify-between bg-blue-50 border border-blue-100 p-4 rounded-xl">
+                        <div class="flex items-center gap-2 text-slate-700">
+                            <span class="font-bold">${t.from}</span>
+                            <span class="text-blue-300">➜</span>
+                            <span class="font-bold">${t.to}</span>
                         </div>
-                        <div class="font-mono text-lg font-bold text-indigo-600">¥${t.amount.toFixed(2)}</div>
+                        <div class="text-xl font-bold text-blue-600">¥${t.amount.toFixed(2)}</div>
                     </div>
                 `).join('');
             }
 
+            // 打开弹窗
             document.getElementById('resultModal').classList.remove('hidden');
         }
 
@@ -336,10 +375,7 @@
         }
 
         function copyLink() {
-            const url = window.location.href;
-            navigator.clipboard.writeText(url).then(() => {
-                alert('链接已复制！发给群里的朋友即可一起记账');
-            });
+            navigator.clipboard.writeText(window.location.href).then(() => alert('链接已复制！'));
         }
     </script>
 </body>
